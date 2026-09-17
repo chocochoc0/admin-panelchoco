@@ -2,56 +2,110 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель Администратора</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); width: 300px; text-align: center; }
-        input { width: 90%; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #333; background: #2a2a2a; color: #fff; }
-        button { width: 95%; padding: 10px; background: #007bff; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .hidden { display: none; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        h2 { margin-top: 0; color: #58a6ff; text-align: center; }
+        label { display: block; margin-top: 12px; margin-bottom: 4px; font-size: 14px; color: #8b949e; }
+        input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #c9d1d9; font-size: 14px; }
+        input:focus { outline: none; border-color: #58a6ff; }
+        button { width: 100%; margin-top: 20px; padding: 10px; background: #238636; border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 14px; }
+        button:hover { background: #2ea043; }
+        #status { margin-top: 15px; text-align: center; font-size: 14px; word-break: break-all; }
+        .success { color: #3fb950; }
+        .error { color: #f85149; }
     </style>
 </head>
 <body>
 
-<div class="card" id="loginBlock">
-    <h2>Вход в Админку</h2>
-    <input type="text" id="adminUser" placeholder="Имя пользователя">
-    <input type="password" id="adminPass" placeholder="Пароль">
-    <button onclick="login()">Войти</button>
-    <p id="error" style="color: red;"></p>
-</div>
+<div class="card">
+    <h2>Админ-панель</h2>
+    
+    <label for="token">GitHub Token (PAT)</label>
+    <input type="password" id="token" placeholder="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">
 
-<div class="card hidden" id="adminBlock">
-    <h2>Управление Юзерами</h2>
-    <input type="text" id="newUsername" placeholder="Имя нового юзера">
+    <hr style="border: 0; border-top: 1px solid #30363d; margin: 20px 0;">
+
+    <label for="username">Имя пользователя (Логин / Имя файла)</label>
+    <input type="text" id="username" placeholder="alex">
+
+    <label for="password">Пароль</label>
+    <input type="text" id="password" placeholder="qwerty123">
+
+    <label for="name">Отображаемое имя</label>
+    <input type="text" id="name" placeholder="Алексей">
+
     <button onclick="createUser()">Создать пользователя</button>
+
+    <div id="status"></div>
 </div>
 
 <script>
-    // Жестко заданные данные (для базовой проверки)
-    const ADMIN_USER = "admin";
-    const ADMIN_PASS = "123456"; 
+    const REPO_OWNER = "chocochoc0";
+    const REPO_NAME = "admin-panelchoco";
 
-    function login() {
-        const u = document.getElementById('adminUser').value;
-        const p = document.getElementById('adminPass').value;
+    async function createUser() {
+        const token = document.getElementById('token').value.trim();
+        const username = document.getElementById('username').value.trim().toLowerCase();
+        const password = document.getElementById('password').value.trim();
+        const name = document.getElementById('name').value.trim();
+        const status = document.getElementById('status');
 
-        if (u === ADMIN_USER && p === ADMIN_PASS) {
-            document.getElementById('loginBlock').classList.add('hidden');
-            document.getElementById('adminBlock').classList.remove('hidden');
-        } else {
-            document.getElementById('error').innerText = "Неверный логин или пароль!";
+        if (!token || !username || !password || !name) {
+            status.className = "error";
+            status.innerText = "Заполните все поля!";
+            return;
         }
-    }
 
-    function createUser() {
-        const username = document.getElementById('newUsername').value;
-        if (!username) return alert("Введите имя!");
-        
-        alert("Чтобы добавить файл '" + username + "' без расширения в папку /users/, создай его в репозитории GitHub.");
+        status.className = "";
+        status.innerText = "Создание файла на GitHub...";
+
+        // Формируем содержимое JSON-файла
+        const userData = {
+            username: username,
+            password: password,
+            name: name
+        };
+
+        // Кодируем JSON в Base64 для передачи через GitHub API
+        const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(userData, null, 2))));
+
+        // Путь: /users/username (без расширения)
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/users/${username}`;
+
+        try {
+            const response = await fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: `Create user: ${username}`,
+                    content: contentBase64
+                })
+            });
+
+            if (response.ok) {
+                status.className = "success";
+                status.innerText = `Успешно! Файл users/${username} создан.`;
+                document.getElementById('username').value = "";
+                document.getElementById('password').value = "";
+                document.getElementById('name').value = "";
+            } else {
+                const errData = await response.json();
+                status.className = "error";
+                status.innerText = "Ошибка: " + (errData.message || "Не удалось создать пользователя");
+            }
+        } catch (e) {
+            status.className = "error";
+            status.innerText = "Ошибка сети!";
+        }
     }
 </script>
 
 </body>
-      </html>
-      
+</html>
