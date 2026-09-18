@@ -3,107 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Панель Администратора</title>
+    <title>Админ-панель управления</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-        h2 { margin-top: 0; color: #58a6ff; text-align: center; }
-        label { display: block; margin-top: 12px; margin-bottom: 4px; font-size: 14px; color: #8b949e; }
-        input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #c9d1d9; font-size: 14px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 600px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        h2, h3 { color: #58a6ff; margin-top: 0; }
+        label { display: block; margin-top: 10px; margin-bottom: 4px; font-size: 13px; color: #8b949e; }
+        input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #c9d1d9; font-size: 14px; margin-bottom: 10px; }
         input:focus { outline: none; border-color: #58a6ff; }
-        button { width: 100%; margin-top: 20px; padding: 10px; background: #238636; border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 14px; }
+        button { width: 100%; padding: 10px; background: #238636; border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 5px; }
         button:hover { background: #2ea043; }
-        #status { margin-top: 15px; text-align: center; font-size: 14px; word-break: break-all; }
+        button.danger { background: #da3633; }
+        button.danger:hover { background: #b62324; }
+        button.secondary { background: #30363d; }
+        button.secondary:hover { background: #8b949e; }
+        .hidden { display: none !important; }
+        .user-item { padding: 10px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; margin-top: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .user-item:hover { border-color: #58a6ff; }
+        #status { margin-top: 10px; font-size: 14px; text-align: center; }
         .success { color: #3fb950; }
         .error { color: #f85149; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Админ-панель</h2>
-    
-    <label for="token">GitHub Token (PAT)</label>
-    <input type="password" id="token" placeholder="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">
+<div class="container">
+    <!-- 1. Экран авторизации (Пароль/Токен) -->
+    <div class="card" id="authBlock">
+        <h2>Вход в Админ-панель</h2>
+        <label for="adminToken">GitHub Token (PAT)</label>
+        <input type="password" id="adminToken" placeholder="ghp_xxxxxxxxxxxx">
+        <button onclick="login()">Войти</button>
+        <div id="authStatus"></div>
+    </div>
 
-    <hr style="border: 0; border-top: 1px solid #30363d; margin: 20px 0;">
+    <!-- 2. Главное меню управления (скрыто до входа) -->
+    <div id="mainBlock" class="hidden">
+        
+        <!-- Создание пользователя -->
+        <div class="card">
+            <h3>Создать пользователя</h3>
+            <input type="text" id="newUsername" placeholder="Логин (латиница)" maxlength="30">
+            <input type="password" id="newPassword" placeholder="Пароль">
+            <input type="text" id="newName" placeholder="Имя (до 25 символов)" maxlength="25">
+            <input type="number" id="newBalance" placeholder="Стартовый баланс" value="0">
+            <button onclick="createUser()">Создать пользователя</button>
+        </div>
 
-    <label for="username">Имя пользователя (Логин / Имя файла)</label>
-    <input type="text" id="username" placeholder="alex">
+        <!-- Поиск и база пользователей -->
+        <div class="card">
+            <h3>База пользователей</h3>
+            <input type="text" id="searchQuery" placeholder="Поиск по логину..." oninput="filterUsers()">
+            <div id="usersList">Загрузка списка...</div>
+        </div>
 
-    <label for="password">Пароль</label>
-    <input type="text" id="password" placeholder="qwerty123">
+        <!-- Меню редактирования конкретного юзера -->
+        <div class="card hidden" id="editBlock">
+            <h3>Редактирование: <span id="editUsernameTitle" style="color:#fff;"></span></h3>
+            
+            <label for="editName">Имя пользователя (до 25 символов)</label>
+            <input type="text" id="editName" maxlength="25">
 
-    <label for="name">Отображаемое имя</label>
-    <input type="text" id="name" placeholder="Алексей">
+            <label for="editBalance">Баланс</label>
+            <input type="number" id="editBalance">
 
-    <button onclick="createUser()">Создать пользователя</button>
+            <button onclick="saveUserChanges()">Сохранить изменения</button>
+            <button class="danger" onclick="deleteUser()" style="margin-top: 10px;">Удалить аккаунт</button>
+            <button class="secondary" onclick="closeEdit()" style="margin-top: 10px;">Отмена</button>
+        </div>
 
-    <div id="status"></div>
+        <div id="globalStatus"></div>
+    </div>
 </div>
 
 <script>
     const REPO_OWNER = "chocochoc0";
     const REPO_NAME = "admin-panelchoco";
+    const SALT = "MySuperSecretSalt123"; // Соль для хэширования паролей
 
-    async function createUser() {
-        const token = document.getElementById('token').value.trim();
-        const username = document.getElementById('username').value.trim().toLowerCase();
-        const password = document.getElementById('password').value.trim();
-        const name = document.getElementById('name').value.trim();
-        const status = document.getElementById('status');
+    let GITHUB_TOKEN = "";
+    let allUsers = [];
+    let selectedUser = null;
 
-        if (!token || !username || !password || !name) {
-            status.className = "error";
-            status.innerText = "Заполните все поля!";
+    // Вход по токену
+    async function login() {
+        const token = document.getElementById('adminToken').value.trim();
+        const authStatus = document.getElementById('authStatus');
+
+        if (!token) {
+            authStatus.className = "error";
+            authStatus.innerText = "Введите токен!";
             return;
         }
 
-        status.className = "";
-        status.innerText = "Создание файла на GitHub...";
+        GITHUB_TOKEN = token;
+        authStatus.className = "";
+        authStatus.innerText = "Проверка токена...";
 
-        // Формируем содержимое JSON-файла
+        // Проверяем токен путем получения списка файлов из /users/
+        const success = await loadUsersList();
+        if (success) {
+            document.getElementById('authBlock').classList.add('hidden');
+            document.getElementById('mainBlock').classList.remove('hidden');
+        } else {
+            authStatus.className = "error";
+            authStatus.innerText = "Неверный токен или нет доступа к репозиторию!";
+        }
+    }
+
+    // Хэширование пароля SHA-256 + Salt
+    async function hashPassword(password) {
+        const msgUint8 = new TextEncoder().encode(password + SALT);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Загрузка списка пользователей
+    async function loadUsersList() {
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/users`;
+        try {
+            const response = await fetch(url, {
+                headers: { "Authorization": `Bearer ${GITHUB_TOKEN}` }
+            });
+
+            if (response.status === 404) {
+                allUsers = [];
+                renderUsersList([]);
+                return true;
+            }
+
+            if (!response.ok) return false;
+
+            const files = await response.json();
+            allUsers = files.filter(f => f.type === "file").map(f => f.name);
+            renderUsersList(allUsers);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Отрисовка списка с поиском
+    function renderUsersList(list) {
+        const container = document.getElementById('usersList');
+        container.innerHTML = "";
+
+        if (list.length === 0) {
+            container.innerHTML = "<p style='color:#8b949e;'>Пользователи не найдены.</p>";
+            return;
+        }
+
+        list.forEach(username => {
+            const div = document.createElement('div');
+            div.className = "user-item";
+            div.innerHTML = `<span><strong>${username}</strong></span> <span style="color:#8b949e; font-size:12px;">Нажмите для ред.</span>`;
+            div.onclick = () => openUserEdit(username);
+            container.appendChild(div);
+        });
+    }
+
+    // Фильтрация поиска по логину
+    function filterUsers() {
+        const query = document.getElementById('searchQuery').value.trim().toLowerCase();
+        const filtered = allUsers.filter(u => u.toLowerCase().includes(query));
+        renderUsersList(filtered);
+    }
+
+    // Создание нового пользователя
+    async function createUser() {
+        const username = document.getElementById('newUsername').value.trim().toLowerCase();
+        const password = document.getElementById('newPassword').value.trim();
+        const name = document.getElementById('newName').value.trim();
+        const balance = parseFloat(document.getElementById('newBalance').value) || 0;
+        const status = document.getElementById('globalStatus');
+
+        if (!username || !password || !name) {
+            setStatus("Заполните все поля!", "error");
+            return;
+        }
+
+        if (name.length > 25) {
+            setStatus("Имя не должно превышать 25 символов!", "error");
+            return;
+        }
+
+        setStatus("Создание пользователя...", "");
+
+        const hashedPassword = await hashPassword(password);
         const userData = {
             username: username,
-            password: password,
-            name: name
+            password: hashedPassword,
+            name: name,
+            balance: balance
         };
 
-        // Кодируем JSON в Base64 для передачи через GitHub API
-        const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(userData, null, 2))));
+        const success = await saveFileToGithub(username, userData, `Create user: ${username}`);
+        if (success) {
+            setStatus(`Пользователь ${username} успешно создан!`, "success");
+            document.getElementById('newUsername').value = "";
+            document.getElementById('newPassword').value = "";
+            document.getElementById('newName').value = "";
+            document.getElementById('newBalance').value = "0";
+            loadUsersList();
+        } else {
+            setStatus("Ошибка при создании пользователя на GitHub.", "error");
+        }
+    }
 
-        // Путь: /users/username (без расширения)
+    // Открытие формы редактирования юзера
+    async function openUserEdit(username) {
+        setStatus(`Загрузка данных ${username}...`, "");
         const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/users/${username}`;
 
         try {
-            const response = await fetch(url, {
-                method: "PUT",
+            const res = await fetch(url, { headers: { "Authorization": `Bearer ${GITHUB_TOKEN}` } });
+            if (!res.ok) throw new Error();
+            const fileData = await res.json();
+            
+            // Декодируем Base64 в UTF-8
+            const content = decodeURIComponent(escape(atob(fileData.content)));
+            selectedUser = JSON.parse(content);
+            selectedUser._sha = fileData.sha; // Нужен для обновления/удаления через API
+
+            document.getElementById('editUsernameTitle').innerText = selectedUser.username;
+            document.getElementById('editName').value = selectedUser.name || "";
+            document.getElementById('editBalance').value = selectedUser.balance || 0;
+
+            document.getElementById('editBlock').classList.remove('hidden');
+            setStatus("", "");
+        } catch (e) {
+            setStatus("Не удалось загрузить данные пользователя.", "error");
+        }
+    }
+
+    // Сохранение изменений (Баланс / Имя)
+    async function saveUserChanges() {
+        if (!selectedUser) return;
+
+        const newName = document.getElementById('editName').value.trim();
+        const newBalance = parseFloat(document.getElementById('editBalance').value) || 0;
+
+        if (newName.length > 25) {
+            setStatus("Имя не должно превышать 25 символов!", "error");
+            return;
+        }
+
+        selectedUser.name = newName;
+        selectedUser.balance = newBalance;
+
+        const sha = selectedUser._sha;
+        delete selectedUser._sha; // Удаляем служебное поле перед сохранением
+
+        setStatus("Сохранение изменений...", "");
+        const success = await saveFileToGithub(selectedUser.username, selectedUser, `Update user: ${selectedUser.username}`, sha);
+
+        if (success) {
+            setStatus("Данные пользователя обновлены!", "success");
+            closeEdit();
+            loadUsersList();
+        } else {
+            setStatus("Ошибка при сохранении данных.", "error");
+        }
+    }
+
+    // Удаление пользователя
+    async function deleteUser() {
+        if (!selectedUser || !confirm(`Удалить аккаунт ${selectedUser.username}?`)) return;
+
+        setStatus("Удаление пользователя...", "");
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/users/${selectedUser.username}`;
+
+        try {
+            const res = await fetch(url, {
+                method: "DELETE",
                 headers: {
-                    "Authorization": `Bearer ${token}`,
+                    "Authorization": `Bearer ${GITHUB_TOKEN}`,
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    message: `Create user: ${username}`,
-                    content: contentBase64
+                    message: `Delete user: ${selectedUser.username}`,
+                    sha: selectedUser._sha
                 })
             });
 
-            if (response.ok) {
-                status.className = "success";
-                status.innerText = `Успешно! Файл users/${username} создан.`;
-                document.getElementById('username').value = "";
-                document.getElementById('password').value = "";
-                document.getElementById('name').value = "";
+            if (res.ok) {
+                setStatus(`Аккаунт ${selectedUser.username} удален!`, "success");
+                closeEdit();
+                loadUsersList();
             } else {
-                const errData = await response.json();
-                status.className = "error";
-                status.innerText = "Ошибка: " + (errData.message || "Не удалось создать пользователя");
+                setStatus("Ошибка при удалении аккаунта.", "error");
             }
         } catch (e) {
-            status.className = "error";
-            status.innerText = "Ошибка сети!";
+            setStatus("Ошибка сети при удалении.", "error");
         }
+    }
+
+    // Закрыть окно редактирования
+    function closeEdit() {
+        selectedUser = null;
+        document.getElementById('editBlock').classList.add('hidden');
+    }
+
+    // Вспомогательная функция записи файла в GitHub
+    async function saveFileToGithub(username, dataObject, commitMessage, sha = null) {
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/users/${username}`;
+        const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(dataObject, null, 2))));
+
+        const bodyData = {
+            message: commitMessage,
+            content: contentBase64
+        };
+        if (sha) bodyData.sha = sha;
+
+        try {
+            const res = await fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `Bearer ${GITHUB_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(bodyData)
+            });
+            return res.ok;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function setStatus(msg, type) {
+        const status = document.getElementById('globalStatus');
+        status.className = type;
+        status.innerText = msg;
     }
 </script>
 
